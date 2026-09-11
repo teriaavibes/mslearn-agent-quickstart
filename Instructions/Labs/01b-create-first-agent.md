@@ -173,222 +173,43 @@ Now you have a working agent, you can preview it in a basic web chat application
 
     ![Screenshot of an agent preview chat interface.](./media/agent-preview.png)
 
-## Continue developing your agent in Visual Studio Code
+1. When you've finished testing the agent, close the tab containing the preview app to return to your agent in the Foundry portal
 
-Now you're ready to continue developing your agent using the Foundry integration features of Visual Studio Code.
-
-The Foundry Toolkit extension for Visual Studio Code brings the assets in your Foundry projects right into the development environment.
-
-1. Start Visual Studio Code
-1. In the navigation bar on the left, view the **Extensions** page.
-1. Search the extensions marketplace for `Foundry Toolkit`, and install the **Foundry Toolkit for VS Code** extension.
-
-    The extension may take a minute or so to install.
-
-1. After installing the extension, select the **Foundry Toolkit** page in the left navigation bar; and wait for it to load.
-
-    ![Screenshot of the Foundry Toolkit Visual Studio Code extension.](./media/foundry-vs-extension.png)
-
-1. In the Foundry Toolkit pane, expand **My Resources** and set the default project by connecting to Azure (signing in with your credentials) and selecting the Foundry project you created previously.
-
-### Connect to your agent
-
-Now that you have a connection to your Foundry project, you can access the assets you've created in it - including the *computing-historian* agent you created previously.
-
-1. In the Foundry Toolkit pane, under your project, select **Agents** and on the **Prompt agents** tab, select the **computing-historian** agent you created previously.
-
-    The latest version of the agent is opened in the **Agent Builder** interface within Visual Studio Code, so you can continue to develop and test it.
-
-    ![Screenshot of the Agent Builder in Visual Studio Code.](./media/vs-code-playground.png)
-
-### Write code to test your agent
-
-While you can use the graphical interface in the Foundry Portal and the Foundry Extension in Visual Studio code to develop and test an agent, eventually you'll want to write and test code. You can use the Azure AI Projects SDK and the OpenAI Responses API to do so.
-
-1. In the **Agent Builder** pane, and select **View code**. Then when prompted, browse to the location on your local drive where you want to store your agent code (you can use any local folder).
-
-    A new Visual Studio Code instance is opened, containing code files to work with your agent.
-
-1. In the new Visual Studio Code workspace, select the **run_agent.py** code file. The code it contains should look similar to this:
-
-    ```python
-    """Build Agent using Microsoft Agent Framework in Python
-    
-    # Run this python script
-    >
-    > pip install agent-framework==<version>
-    > python <this-script-path>.py
-    """
-    
-    import asyncio
-    import os
-    from dotenv import load_dotenv
-    
-    from agent_framework_foundry import FoundryAgent
-    from azure.identity.aio import DefaultAzureCredential
-    
-    load_dotenv()
-    
-    # User inputs for the conversation
-    
-    USER_INPUTS = [
-        "Hello",
-    ]
-    
-    async def main() -> None:
-        # For authentication, DefaultAzureCredential supports multiple authentication methods. Run `az login` in terminal for Azure CLI auth.
-        async with FoundryAgent(
-            project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
-            agent_name="computing-historian",
-            agent_version="1",
-            credential=DefaultAzureCredential(),
-        ) as agent:
-    
-            # Process user messages
-            for user_input in USER_INPUTS:
-                print(f"\n# User: '{user_input}'")
-                printed_tool_calls = set()
-                async for chunk in agent.run(user_input, stream=True):
-                    # log tool calls if any
-                    function_calls = [
-                        c for c in chunk.contents
-                        if c.type == "function_call"
-                    ]
-                    for call in function_calls:
-                        if call.call_id not in printed_tool_calls:
-                            print(f"Tool calls: {call.name}")
-                            printed_tool_calls.add(call.call_id)
-                    if chunk.text:
-                        print(chunk.text, end="", flush=True)
-                print("")
-    
-            print("\n--- All tasks completed successfully ---")
-    
-    if __name__ == "__main__":
-        try:
-            asyncio.run(main())
-        except KeyboardInterrupt:
-            print("\nProgram interrupted by user")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            import traceback
-            traceback.print_exc()
-        finally:
-            print("Program finished.")
-    ```
-
-    Note the comments at the top of the file, which provide instructions for preparing the Python environment and running the script.
-
-1. On the **Extensions** page, if it is not already installed, install the **Python** extension. Then, in the **Command Palette (Ctrl+Shift+P)**, use the command `python:create environment` (or `python:select interpreter`) to create a new *Venv* environment based on your Python 3.1x installation.
-
-    > ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: You can choose to install the workspace dependencies in the *requirements.txt* file as you create the environment. Don't worry of you accidentally skip this though; we'll do it in a later step anyway.
-
-    When you have created the Python environment, a folder mamed **.venv** will be added to the workspace (not to be confused with the *.env* file, which contains environment variables for the program)
-
-1. In the **Explorer** pane, right-click the **run_agent.py** file, and select **Open in integrated terminal**.
-
-    > ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: Opening the terminal in Visual Studio Code should automatically activate the Python environment after a few seconds. If you're using a PowerShell terminal, you may need to enable running scripts on your system (see [Set-ExecutionPolicy](https://learn.microsoft.com/powershell/module/microsoft.powershell.security/set-executionpolicy){:target="_blank"}). If for any reason the Python environment is not activated automatically, you can use [this query](https://www.bing.com/search?q=%22How%20do%20I%20activate%20a%20Python%20venv%22){:target="_blank"} to search for information on how to activate it in your environment.
-
-1. Ensure that the terminal is open in the **computinghistorian** folder with the prefix **(.venv)** to indicate that the Python environment you created is active.
-
-    > ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: You can enter the command `cls` to clear the console pane - which may make it easier to focus on the outputs from commands as you run them.
-
-1. Install the required dependencies by running the following command:
-
-    ```bash
-   pip install agent-framework==1.10.0
-    ```
-
-    **Note**: This may be a different version from the one referenced in the sample code and requirements.txt file.
-
-1. After the libraries are installed (which may take a minute or so), use the following command to sign into Azure.
-
-    ```bash
-   az login
-    ```
-
-    > ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: In most scenarios, just using *az login* will be sufficient. However, if you have subscriptions in multiple tenants, you may need to specify the tenant by using the *--tenant* parameter. See [Sign into Azure interactively using the Azure CLI](https://learn.microsoft.com/cli/azure/authenticate-azure-cli-interactively) for details.
-
-1. When prompted, follow the instructions to sign into Azure. Then complete the sign in process in the command line, viewing (and confirming if necessary) the details of the subscription containing your Foundry resource.
-1. After you have signed in, enter the following command to run the application:
-
-    ```bash
-   python run_agent.py
-    ```
-
-    The code should run in the terminal, submit the user prompt "*Hello*" to your agent, and display the response (if not, resolve any errors and try again).
-
-    ![Screenshot of a terminal with code output in Visual Studio Code.](./media/vs-code-run-agent.png)
-
-### Use GitHub Copilot to expand your code
-
-GitHub Copilot provides agentic AI assistance in Visual Studio Code, helping you develop applications more efficiently.
-
-> ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: GitHub Copilot in Visual Studio Code requires that you are signed in using a GitHub account. While agentic assistance is available in all GitHub plans, including free accounts, there are usage limitations.
-
-1. In Visual Studio Code, in the **Extensions** pane, ensure that the **GitHub Copilot Chat** extension is installed and enabled.
-1. At the bottom of the activity bar on the left, select **Accounts** and ensure that you are signed into your GitHub account. If not, sign in to use AI features.
-1. On the toolbar, next to the search box, use the **Toggle Chat** button to show the chat pane on the right.
-
-    ![Screenshot of GitHub Copilot in Visual Studio Code.](./media/vscode-github-copilot.png)
-
-    The **Chat** pane is where you configure and use GitHub Copilot and connected agents to assist you with development tasks. You can select the model that GitHub Copilot uses, configure tools, and add custom agents. We'll use the default settings in this exercise.
-
-1. Ensure the **run_agent.py** code file is open in the editor, then in the **Chat** pane, enter the following prompt:
-
-    ```
-    Modify the code to iteratively ask the user to enter a prompt for the agent and display the results, running until the user enters "quit". 
-    ```
-
-1. Enter the prompt, and wait while GitHub Copilot reviews and modifies your code. Eventually the changes will be staged and displayed.
-
-    ![Screenshot of GitHub Copilot in Visual Studio Code.](./media/vscode-modified-code.png)
-
-1. With the changes staged, in the terminal, re-run the code (`python agent.py`).
-
-    This time the app should continually ask you to enter a prompt and display the results until you enter "quit". (if not, continue to iterate with GitHub Copilot in the chat pane, explaining the behavior you want and any errors that occur until the code works as expected.)
-
-    Some suggested prompts to try:
-
-    - `Tell me about the Commodore 64`
-    - `What was the ZX Spectrum?`
-    - `What was Grace Hopper's contribution to computing?`
-
-    When you're finished, enter `quit`.
-
-1. If you're happy with the code that GitHub Copilot has generated, use the **Keep** button in the **Chat** pane to confirm the changes.
-
-## Use your agent in a client app
+## Develop a client app for the agent
 
 So far you've developed and tested your agent within a Foundry project. To take it into production, you need to write code that consumes it from its dedicated endpoint. That means you can move beyond playground testing and start integrating the agent into a real user experience.
 
-1. If you don't already have it open; in a web browser, open [Microsoft Foundry](https://ai.azure.com){:target="_blank"} at `https://ai.azure.com` and sign in using your Azure credentials. Then switch to the **New Foundry** view if necessary, and open the project in which you created the *computing-historian* agent.
-1. Select the **Build** menu, and in the **Agents** page, select the **computing-historian** agent.
-1. In the **computing-historian** agent page, view the **Details** tab. In particular, note the **Responses** protocol endpoint that clients apps can use to call your agent via the OpenAI Responses API. You'll need this later!
+1. In the **computing-historian** agent page in the Foundry portal, view the **Details** tab. In particular, note the **Responses** protocol endpoint that clients apps can use to call your agent via the OpenAI Responses API. You'll need this later!
 
 ### Configure a client application in Visual Studio Code
 
 A partially completed client application for your agent has been provided. You'll complete this app and test it with your agent endpoint.
 
-1. Open Visual Studio Code if it is not already open, and close any open workspaces.
-1. Open the command palette (*Ctrl+Shift+P*) and use the `Git:clone` command to clone the `https://github.com/MicrosoftLearning/mslearn-agent-quickstart` repo to a local folder (it doesn't matter which one). Then open it.
+1. Start Visual Studio Code.
+
+    > ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: If you're new to Visual Studio Code, you can refer to the [documentation](https://code.visualstudio.com/Docs){:target="_blank"} at `https://code.visualstudio.com/Docs` for help.
+
+1. Open the command palette (*Ctrl+Shift+P* or on the **View** menu, select **Command Palette**) and enter the `Git:clone` command to clone the `https://github.com/MicrosoftLearning/mslearn-agent-quickstart` repo to a local folder (it doesn't matter which one).
+1. After the clone operation is complete, open the folder when prompted.
 
     You may be prompted to confirm you trust the authors.
 
-1. View the **Extensions** pane; and if it is not already installed, install the **Python** extension.
+1. In the Activity bar on the left edge, view the **Extensions** pane; and if it is not already installed, search for and install the **Python** extension.
 1. In the **Command Palette**, use the command `python:create envionment`(or `python:select interpreter`) to create a new **Venv** environment based on your Python 3.1x installation.
 
-    > ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: Just like before, if you are prompted to install dependencies, you can install the ones in the *requirements.txt* file in the */computer-history-client* folder; but it's OK if you don't - we'll install them later!
+    > ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: You can choose to install the workspace dependencies in the *requirements.txt* file as you create the environment. Don't worry of you accidentally skip this though; we'll do it in a later step anyway.
 
-    Wait for the environment to be created.
+    Wait for the environment to be created. It may take a while, and some notifications may be displayed during the process.
 
-1. In the **Explorer** pane, navigate to the folder containing the application code files at **/computer-history-client**. The application files include:
+1. In the Activity bar, switch back to the **Explorer** pane, and navigate to the folder containing the application code files at **/computer-history-client**. The application files include:
     - **.env** (the application configuration file)
     - **agent_client.py** (the code file for the Python code to interact with your agent)
     - **app.py** (the main code file for a Python Flask-based web application)
-    - **README.md** (information about the app)
     - **requirements.txt** (the Python package dependencies that need to be installed)
 1. In the **Explorer** pane, right-click the **agent_client.py** file, and select **Open in integrated terminal**.
+
+    > ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: Opening the terminal in Visual Studio Code should automatically activate the Python environment after a few seconds. If you're using a PowerShell terminal, you may need to enable running scripts on your system (see [Set-ExecutionPolicy](https://learn.microsoft.com/powershell/module/microsoft.powershell.security/set-executionpolicy){:target="_blank"}). If for any reason the Python environment is not activated automatically, you can use [this query](https://www.bing.com/search?q=%22How%20do%20I%20activate%20a%20Python%20venv%22){:target="_blank"} to search for information on how to activate it in your environment.
+
 1. Ensure that the terminal is open in the **/computer-history-client** folder with the prefix **(.venv)** to indicate that the Python environment you created is active.
 1. Install the required Python packages by running the following command:
 
@@ -473,7 +294,46 @@ Now you're ready to test the app with your agent.
 
     Your agent should use its knowledge and tools to provide useful information and insights into computing history related topics.
 
-1. When you're finished testing the app, in the terminal pane, enter **CTRL+C** to stop the local web server.
+1. When you've finished testing the app, close the browser, and in Visual Studio, enter **CTRL+C** in the terminal pane, to stop the local web server.
+
+### Use GitHub Copilot to enhance the application
+
+GitHub Copilot provides agentic AI assistance in Visual Studio Code, helping you develop applications more efficiently.
+
+> ![Image of Anton.](./media/anton-icon.png)<br/>**Tip**: GitHub Copilot in Visual Studio Code requires that you are signed in using a GitHub account. While agentic assistance is available in all GitHub plans, including free accounts, there are usage limitations.
+
+1. In Visual Studio Code, in the **Extensions** pane, ensure that the **GitHub Copilot Chat** extension is installed and enabled.
+1. At the bottom of the activity bar on the left, select **Accounts** and ensure that you are signed into your GitHub account. If not, sign in to use AI features.
+1. On the toolbar, next to the search box, use the **Toggle Chat** button to show the chat pane on the right.
+
+    ![Screenshot of GitHub Copilot in Visual Studio Code.](./media/vscode-github-copilot.png)
+
+    The **Chat** pane is where you configure and use GitHub Copilot and connected agents to assist you with development tasks. You can select the model that GitHub Copilot uses, configure tools, and add custom agents. We'll use the default settings in this exercise.
+
+1. In the **Explorer** pane, in the **/computer-history-client** folder, select **feature-spec.md** and read its contents.
+
+    This file contains a specification for a new feature that enables users to upload an image and submit it to the agent along with a text-based prompt.
+
+1. With the specification file still open, in the Chat pane, enter the following prompt for GitHub Copilot.
+
+    ```
+    Use the feature spec to add an image identification feature to the computer hstory client app.
+    ```
+
+1. Enter the prompt, and wait while GitHub Copilot reviews and modifies your code. Eventually the changes will be staged and displayed.
+
+    ![Screenshot of GitHub Copilot in Visual Studio Code.](./media/vscode-modified-code.png)
+
+1. With the changes staged, in the terminal, re-run the code (`python app.py`), and then open your browser and navigate to the URL where it is running.
+
+1. In the revised version of the app, upload one of the images from the **/test-images** folder (which is in the folder where you cloned the repo); and enter the prompt `What can you tell me about this?`
+
+1. Review the response, which should provide information about the computer in the image you uploaded.
+
+1. Try the other images in the *test-images* folder with prompts like `What about this?` or `Tell me about this.`
+1. When you've finished testing the app, close the browser, and in Visual Studio, enter **CTRL+C** in the terminal pane, to stop the local web server.
+
+1. If you're happy with the code that GitHub Copilot has generated, use the **Keep** button in the **Chat** pane to confirm the changes.
 
 ## Summary
 
